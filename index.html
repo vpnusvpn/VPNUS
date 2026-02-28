@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#023330">
+  <title>VPNUS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100dvh; overflow: hidden; background: #000; }
+
+    .page { position: relative; width: 100%; height: 100dvh; overflow: hidden; }
+    .background { position: absolute; inset: 0; z-index: 0; }
+    .background canvas { width: 100%; height: 100%; display: block; }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 20px;
+      font-family: 'Rubik', sans-serif;
+    }
+
+    .card {
+      width: 90%;
+      max-width: 460px;
+      background: none;
+      border: none;
+      padding: 36px 28px;
+      text-align: center;
+      animation: fadeUp 0.6s ease-out;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header { text-align: center; margin-bottom: 16px; }
+
+    .logo { width: 52px; height: auto; margin-bottom: 18px; }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.92);
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      margin-top: 12px;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.4);
+      font-weight: 300;
+    }
+
+    .btn {
+      width: auto;
+      padding: 14px 40px;
+      font-family: 'Rubik', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      color: #060606;
+      background: #03c8ba;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.02em;
+    }
+
+    .btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; filter: none; }
+
+    .status { margin-top: 20px; display: none; }
+    .status.active { display: block; }
+
+    .status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .status-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 400;
+    }
+
+    .status-counter {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      font-weight: 300;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #03c8ba;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .log {
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+    }
+
+    .log-entry {
+      font-size: 12px;
+      font-weight: 300;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: logIn 0.2s ease-out;
+    }
+
+    .log-entry:last-child { border-bottom: none; }
+
+    @keyframes logIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .dot.checking { background: #f0c866; animation: blink 0.8s infinite; }
+    .dot.ok { background: #03c8ba; }
+    .dot.fail { background: #e87272; }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .log-text { color: rgba(255, 255, 255, 0.4); }
+    .log-text.found { color: #03c8ba; font-weight: 400; }
+
+    .result { margin-top: 20px; text-align: center; display: none; }
+    .result.active { display: block; }
+    .result a { color: #03c8ba; text-decoration: none; font-size: 13px; word-break: break-all; }
+    .result a:hover { text-decoration: underline; }
+    .result-ok { color: #03c8ba; font-weight: 400; margin-bottom: 10px; }
+    .result-fail { color: #e87272; font-size: 14px; font-weight: 300; }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.55);
+      font-weight: 300;
+    }
+
+    .scanning .status-label { animation: pulse 1.2s ease-in-out infinite, shiny-slide 3s linear infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .redirect-overlay {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      animation: fadeUp 0.4s ease-out;
+    }
+
+    .redirect-overlay.active { display: flex; }
+
+    .redirect-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #03c8ba;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .redirect-text {
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    .redirect-timer {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 14px;
+      font-weight: 300;
+    }
+
+    .redirect-timer span {
+      color: #03c8ba;
+      font-weight: 400;
+    }
+
+    /* Shiny Text Effect */
+    @keyframes shiny-slide {
+      0% { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    .header h1 {
+      background-image: linear-gradient(120deg, rgba(255,255,255,0.92) 40%, #fff 50%, rgba(255,255,255,0.92) 60%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: fadeUp 0.6s ease-out, shiny-slide 3s linear infinite;
+    }
+
+    .status-label,
+    .status-counter,
+    .log-text {
+      background-image: linear-gradient(120deg, rgba(255,255,255,0.4) 40%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0.4) 60%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shiny-slide 3s linear infinite;
+    }
+
+    .footer {
+      background-image: linear-gradient(120deg, rgba(255,255,255,0.55) 40%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.55) 60%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shiny-slide 3s linear infinite;
+    }
+
+    .redirect-text {
+      background-image: linear-gradient(120deg, rgba(255,255,255,0.85) 40%, #fff 50%, rgba(255,255,255,0.85) 60%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shiny-slide 3s linear infinite;
+    }
+
+    .log-text.found,
+    .result-ok,
+    .result a {
+      background-image: linear-gradient(120deg, #03c8ba 40%, #60fff0 50%, #03c8ba 60%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shiny-slide 3s linear infinite;
+    }
+
+    .result a:hover { text-decoration-color: #03c8ba; }
+
+    .result-fail {
+      background-image: linear-gradient(120deg, #e87272 40%, #ffaaaa 50%, #e87272 60%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shiny-slide 3s linear infinite;
+    }
+
+
+    .btn {
+      background: linear-gradient(120deg, #03c8ba 40%, #2dd8cc 50%, #03c8ba 60%);
+      background-size: 200% auto;
+      animation: shiny-slide 4s linear infinite;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 28px 20px; border-radius: 20px; }
+      .header h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="background" id="grainient"></div>
+    <div class="content">
+      <div class="card">
+        <div class="header">
+          <svg class="logo" viewBox="0 0 697 355" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M323.917 254.23L377.364 337.945C381.862 344.984 376.799 354.2 368.45 354.2H159.642C156.032 354.2 152.663 352.365 150.727 349.319L1.67989 115.942C-2.81775 108.904 2.24446 99.6876 10.5943 99.6876H220.148C223.758 99.6876 227.127 101.523 229.063 104.568L300.138 215.852C304.252 222.285 313.611 222.386 317.846 216.033L459.028 4.69916C460.984 1.75472 464.292 0 467.821 0H685.705C694.155 0 699.198 9.41822 694.498 16.4365L549.666 233.256C547.71 236.201 544.402 237.955 540.873 237.955H332.831C324.481 237.955 319.419 247.172 323.917 254.21V254.23Z" fill="white"/>
+          </svg>
+          <h1>Поиск зеркала</h1>
+        </div>
+
+        <button class="btn" id="startBtn" onclick="startScan()">Найти рабочее зеркало</button>
+        <p class="subtitle">Автоматический подбор рабочего адреса</p>
+      </div>
+
+      <div class="redirect-overlay" id="redirectOverlay">
+        <div class="redirect-row">
+          <div class="spinner"></div>
+          <span class="redirect-text">Перенаправляю...</span>
+        </div>
+        <div class="redirect-timer">Максимум <span id="countdown">30</span> секунд</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const mirrors = [
+      "https://dostup.cc/"
+    ];
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function $(id) { return document.getElementById(id); }
+
+    window.addEventListener('pageshow', function(e) {
+      if (e.persisted) {
+        document.querySelector('.card').style.display = '';
+        $('redirectOverlay').className = 'redirect-overlay';
+        $('startBtn').textContent = 'Найти рабочее зеркало';
+        $('countdown').textContent = '30';
+      }
+    });
+
+    async function checkMirror(domain) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      try {
+        await fetch('https://' + domain, { mode: 'no-cors', signal: controller.signal });
+        clearTimeout(timeout);
+        return true;
+      } catch (e) {
+        clearTimeout(timeout);
+        return false;
+      }
+    }
+
+    async function startScan() {
+      document.querySelector('.card').style.display = 'none';
+      $('redirectOverlay').className = 'redirect-overlay active';
+
+      let sec = 30;
+      const cd = $('countdown');
+      const timer = setInterval(function() {
+        sec--;
+        cd.textContent = sec;
+        if (sec <= 0) clearInterval(timer);
+      }, 1000);
+
+      const shuffled = shuffle(mirrors);
+      const batchSize = 5;
+      let found = null;
+
+      for (let i = 0; i < shuffled.length && !found; i += batchSize) {
+        const batch = shuffled.slice(i, i + batchSize);
+        const results = await Promise.all(
+          batch.map(async (domain) => {
+            const ok = await checkMirror(domain);
+            return ok ? domain : null;
+          })
+        );
+        found = results.find(r => r !== null) || null;
+      }
+
+      clearInterval(timer);
+
+      if (found) {
+        window.location.href = 'https://' + found;
+      } else {
+        $('redirectOverlay').className = 'redirect-overlay';
+        document.querySelector('.card').style.display = '';
+        $('startBtn').textContent = 'Попробовать снова';
+      }
+    }
+  </script>
+
+  <script type="importmap">
+    { "imports": { "ogl": "https://cdn.jsdelivr.net/npm/ogl@1.0.11/+esm" } }
+  </script>
+  <script type="module">
+    import { Renderer, Program, Mesh, Triangle } from 'ogl';
+
+    const hexToRgb = hex => {
+      const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if (!r) return [1, 1, 1];
+      return [parseInt(r[1], 16) / 255, parseInt(r[2], 16) / 255, parseInt(r[3], 16) / 255];
+    };
+
+    const vertex = `#version 300 es
+in vec2 position;
+void main() { gl_Position = vec4(position, 0.0, 1.0); }`;
+
+    const fragment = `#version 300 es
+precision highp float;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float uTimeSpeed;
+uniform float uColorBalance;
+uniform float uWarpStrength;
+uniform float uWarpFrequency;
+uniform float uWarpSpeed;
+uniform float uWarpAmplitude;
+uniform float uBlendAngle;
+uniform float uBlendSoftness;
+uniform float uRotationAmount;
+uniform float uNoiseScale;
+uniform float uGrainAmount;
+uniform float uGrainScale;
+uniform float uGrainAnimated;
+uniform float uContrast;
+uniform float uGamma;
+uniform float uSaturation;
+uniform vec2 uCenterOffset;
+uniform float uZoom;
+uniform vec3 uColor1;
+uniform vec3 uColor2;
+uniform vec3 uColor3;
+out vec4 fragColor;
+#define S(a,b,t) smoothstep(a,b,t)
+mat2 Rot(float a){float s=sin(a),c=cos(a);return mat2(c,-s,s,c);}
+vec2 hash(vec2 p){p=vec2(dot(p,vec2(2127.1,81.17)),dot(p,vec2(1269.5,283.37)));return fract(sin(p)*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.0-2.0*f);float n=mix(mix(dot(-1.0+2.0*hash(i+vec2(0.0,0.0)),f-vec2(0.0,0.0)),dot(-1.0+2.0*hash(i+vec2(1.0,0.0)),f-vec2(1.0,0.0)),u.x),mix(dot(-1.0+2.0*hash(i+vec2(0.0,1.0)),f-vec2(0.0,1.0)),dot(-1.0+2.0*hash(i+vec2(1.0,1.0)),f-vec2(1.0,1.0)),u.x),u.y);return 0.5+0.5*n;}
+void main(){
+  float t=iTime*uTimeSpeed;
+  vec2 uv=gl_FragCoord.xy/iResolution.xy;
+  float ratio=iResolution.x/iResolution.y;
+  vec2 tuv=uv-0.5+uCenterOffset;
+  tuv/=max(uZoom,0.001);
+  float degree=noise(vec2(t*0.1,tuv.x*tuv.y)*uNoiseScale);
+  tuv.y*=1.0/ratio;
+  tuv*=Rot(radians((degree-0.5)*uRotationAmount+180.0));
+  tuv.y*=ratio;
+  float frequency=uWarpFrequency;
+  float ws=max(uWarpStrength,0.001);
+  float amplitude=uWarpAmplitude/ws;
+  float warpTime=t*uWarpSpeed;
+  tuv.x+=sin(tuv.y*frequency+warpTime)/amplitude;
+  tuv.y+=sin(tuv.x*(frequency*1.5)+warpTime)/(amplitude*0.5);
+  vec3 colLav=uColor1;
+  vec3 colOrg=uColor2;
+  vec3 colDark=uColor3;
+  float b=uColorBalance;
+  float s=max(uBlendSoftness,0.0);
+  mat2 blendRot=Rot(radians(uBlendAngle));
+  float blendX=(tuv*blendRot).x;
+  float edge0=-0.3-b-s;
+  float edge1=0.2-b+s;
+  float v0=0.5-b+s;
+  float v1=-0.3-b-s;
+  vec3 layer1=mix(colDark,colOrg,S(edge0,edge1,blendX));
+  vec3 layer2=mix(colOrg,colLav,S(edge0,edge1,blendX));
+  vec3 col=mix(layer1,layer2,S(v0,v1,tuv.y));
+  vec2 grainUv=uv*max(uGrainScale,0.001);
+  if(uGrainAnimated>0.5){grainUv+=vec2(iTime*0.05);}
+  float grain=fract(sin(dot(grainUv,vec2(12.9898,78.233)))*43758.5453);
+  col+=(grain-0.5)*uGrainAmount;
+  col=(col-0.5)*uContrast+0.5;
+  float luma=dot(col,vec3(0.2126,0.7152,0.0722));
+  col=mix(vec3(luma),col,uSaturation);
+  col=pow(max(col,0.0),vec3(1.0/max(uGamma,0.001)));
+  col=clamp(col,0.0,1.0);
+  fragColor=vec4(col,1.0);
+}`;
+
+    const container = document.getElementById('grainient');
+    const renderer = new Renderer({ webgl: 2, alpha: true, antialias: false, dpr: Math.min(window.devicePixelRatio || 1, 2) });
+    const gl = renderer.gl;
+    const canvas = gl.canvas;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
+    container.appendChild(canvas);
+
+    const geometry = new Triangle(gl);
+    const program = new Program(gl, {
+      vertex,
+      fragment,
+      uniforms: {
+        iTime: { value: 0 },
+        iResolution: { value: new Float32Array([1, 1]) },
+        uTimeSpeed: { value: 0.4 },
+        uColorBalance: { value: 0.0 },
+        uWarpStrength: { value: 1.0 },
+        uWarpFrequency: { value: 5.0 },
+        uWarpSpeed: { value: 2.0 },
+        uWarpAmplitude: { value: 50.0 },
+        uBlendAngle: { value: 0.0 },
+        uBlendSoftness: { value: 0.05 },
+        uRotationAmount: { value: 500.0 },
+        uNoiseScale: { value: 2.0 },
+        uGrainAmount: { value: 0.1 },
+        uGrainScale: { value: 2.0 },
+        uGrainAnimated: { value: 0.0 },
+        uContrast: { value: 1.5 },
+        uGamma: { value: 1.0 },
+        uSaturation: { value: 1.0 },
+        uCenterOffset: { value: new Float32Array([0, 0]) },
+        uZoom: { value: 0.9 },
+        uColor1: { value: new Float32Array(hexToRgb('#03c8ba')) },
+        uColor2: { value: new Float32Array(hexToRgb('#023330')) },
+        uColor3: { value: new Float32Array(hexToRgb('#023330')) }
+      }
+    });
+
+    const mesh = new Mesh(gl, { geometry, program });
+
+    const setSize = () => {
+      const rect = container.getBoundingClientRect();
+      const w = Math.max(1, Math.floor(rect.width));
+      const h = Math.max(1, Math.floor(rect.height));
+      renderer.setSize(w, h);
+      const res = program.uniforms.iResolution.value;
+      res[0] = gl.drawingBufferWidth;
+      res[1] = gl.drawingBufferHeight;
+    };
+
+    new ResizeObserver(setSize).observe(container);
+    setSize();
+
+    const t0 = performance.now();
+    (function loop(t) {
+      program.uniforms.iTime.value = (t - t0) * 0.001;
+      renderer.render({ scene: mesh });
+      requestAnimationFrame(loop);
+    })(t0);
+  </script>
+</body>
+</html>
